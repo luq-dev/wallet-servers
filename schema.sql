@@ -13,10 +13,15 @@ CREATE TABLE IF NOT EXISTS users (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS account_types (
+    id SERIAL PRIMARY KEY,
+    type_name VARCHAR(50) NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS accounts (
     id BIGSERIAL PRIMARY KEY,
     account_number VARCHAR(255) UNIQUE NOT NULL, -- this is the internal known id rather than the physical database known id
-    user_id INTEGER NOT NULL REFERENCES users(email),
+    user_id VARCHAR NOT NULL REFERENCES users(email),
     account_type INTEGER NOT NULL REFERENCES account_types(id),
     currency VARCHAR(3),
     account_name VARCHAR(255),
@@ -33,10 +38,9 @@ CREATE TABLE IF NOT EXISTS cards (
 
 CREATE TABLE IF NOT EXISTS user_cards (
     id BIGSERIAL PRIMARY KEY,
-    user VARCHAR FOREIGN KEY UNIQUE REFERENCES account(account_number),
-    card_number VARCHAR, -- to be assigned by sysadmins or automated. constructed from available cards using networks and the BIN. this is part of the mock by the way not the actual thing
+    card_owner VARCHAR  UNIQUE REFERENCES accounts(account_number),
+    card_number VARCHAR(255) -- to be assigned by sysadmins or automated. constructed from available cards using networks and the BIN. this is part of the mock by the way not the actual thing
 );
-
 
 CREATE TABLE IF NOT EXISTS balances (
     id BIGSERIAL PRIMARY KEY,
@@ -58,7 +62,7 @@ CREATE TABLE IF NOT EXISTS transactions (
     details TEXT,
     transaction_status transaction_state NOT NULL,                            -- transaction_state ('PENDING', 'COMPLETE')
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-)PARTITION BY RANGE (created_at);
+); -- Need Parrtitioning
 
 
 CREATE TABLE IF NOT EXISTS messages (
@@ -69,45 +73,41 @@ CREATE TABLE IF NOT EXISTS messages (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS account_types (
-    id SERIAL PRIMARY KEY,
-    type_name VARCHAR(50) NOT NULL
-);
 
 
-CREATE TABLE IF NOT EXISTS exchange_rates {
+CREATE TABLE IF NOT EXISTS exchange_rates (
     business_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     currency VARCHAR(3) NOT NULL,
-    rate DECIMAL(18, 2) NOT NULL, -- AGAINST USD
-}
+    rate DECIMAL(18, 2) NOT NULL -- AGAINST USD
+);
 
 -- VIEWS
 
 
 CREATE VIEW user_account_details AS 
-        SELECT a.user_id, a.account_id, a.account_name, t.type_name as account_type 
+        SELECT a.user_id, a.id, a.account_name, t.type_name as account_type
         FROM accounts a 
         JOIN account_types t 
-        ON a.account_type = t.type_name;
+        ON a.account_type = t.id;
 
 -- FUNCTIONS
 
-CREATE OR REPLACE FUNCTION make100cards(
-    net NUMERIC
-)
-RETURNS VOID $$
-BEGIN
-    DECLARE start_id NUMERIC;
-    DECLARE i NUMERIC;
+-- CREATE OR REPLACE FUNCTION make100cards(
+--     net NUMERIC
+-- )
+-- RETURNS VOID $$
+-- BEGIN
+--     DECLARE start_id NUMERIC;
+--     DECLARE i NUMERIC;
 
-    SELECT unique_id INTO start_id FROM cards WHERE unique_id = MAX(unique_id)
+--     SELECT unique_id INTO start_id FROM cards WHERE unique_id = MAX(unique_id)
 
-    FOR i IN 1..100 LOOP
-        INSERT INTO cards(unique_id, network) VALUES(start_id + 1, net)
-        start_id := start_id + 1
-    END LOOP;
-END;
-$$ LANGUAGE plpgsql;
+--     FOR i IN 1..100 LOOP
+--         INSERT INTO cards(unique_id, network) VALUES(start_id + 1, net)
+--         start_id := start_id + 1
+--     END LOOP;
+-- END;
+-- $$ LANGUAGE plpgsql;
 
 -- INDICES
 
