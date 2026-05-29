@@ -1,27 +1,37 @@
 package services
 
 import (
-	"time"
 	"fmt"
+	"net/http"
+	"strings"
+	"time"
+
 	"github.com/golang-jwt/jwt/v5"
 )
 
-var SECRET = []byte("1234567345678")
+var secret = []byte("1234567345678")
 
 func GenerateToken(uid int64) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"uid": uid,
 		"iat": time.Now().Unix(),
-		"eat": time.Now().Add(time.Hour * 72).Unix(),
+		"exp": time.Now().Add(time.Hour * 72).Unix(),
 	})
-	return token.SignedString(SECRET)
+	return token.SignedString(secret)
 }
 
-func VerifyToken(t string) (*jwt.Token, error){
-	return jwt.Parse(t, func(token *jwt.Token) (interface{}, error) {
+func GetToken(h http.Header) (*jwt.Token, error) {
+	authString := h.Get("Authorization")
+	tokenString := strings.TrimPrefix(authString, "Bearer ") // use [:7 slice in case of performance issues]
+
+	if tokenString == authString {
+		return nil, fmt.Errorf("Missing or invalid authotrization")
+	}
+
+	return jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method")
 		}
-		return SECRET, nil
+		return secret, nil
 	})
 }

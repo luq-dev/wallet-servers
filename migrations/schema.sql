@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS users (
         currency VARCHAR(3) NOT NULL,
         amount DECIMAL(18, 2) NOT NULL,
         description TEXT,
-        status ENUM('PENDING', 'COMPLETED') NOT NULL,
+        status VARCHAR(10) NOT NULL,                            -- transaction_state ('PENDING', 'COMPLETE')
         exchange_rate DECIMAL(10, 6),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
@@ -37,3 +37,5 @@ CREATE TABLE IF NOT EXISTS users (
     CREATE INDEX IF NOT EXISTS idx_transactions_from ON transactions(from_account_id);
     CREATE INDEX IF NOT EXISTS idx_transactions_to ON transactions(to_account_id);
     CREATE INDEX IF NOT EXISTS idx_balances_account ON balances(account_id);
+
+    ALTER TABLE accounts ADD COLUMN account_name VARCHAR(255)

@@ -2,7 +2,6 @@ package data
 
 import (
 	"database/sql"
-	"fmt"
 	"log"
 	"time"
 
@@ -14,26 +13,8 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 )
 
-var Db *sql.DB
 
-// func runMigrations() error {
-// 	m, err := migrate.New(
-// 		"file://migrations",
-// 		"postgres://dl:cathereen@localhost:5432/green_test?sslmode=disable",
-// 	)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	defer m.Close()
-
-// 	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
-// 		return err
-// 	}
-
-// 	return nil
-// }
-
-func init() {
+func ConnectDB() *sql.DB{
 
 	cfg := pq.Config{
 		Database:       "green_test",
@@ -49,12 +30,9 @@ func init() {
 		log.Fatal(err)
 	}
 
-	Db := sql.OpenDB(connector)
+	DB := sql.OpenDB(connector)
 
-	err = Db.Ping()
-	if err == nil {
-		fmt.Println("Database Connected Successfully")
-	}
+	return DB
 }
 
-// DAO - Data Access Objects
+var DB = ConnectDB()
