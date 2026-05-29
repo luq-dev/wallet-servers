@@ -1,22 +1,18 @@
 package accounting
 
-import "time"
+import (
+	"time"
+)
 
-type Account interface {
-	updateBalance()
-	Send(to Account, amount float32, desc string)
-	Receive(from Account, amount float32, desc string)
-	recordTransaction(from, to Account, amount float32, desc string) bool
-}
-
-type LocalAccount struct {
+type Account struct {
 	number  int
 	Name    string
 	book    []Transaction
 	balance float32
 }
 
-func (acc *LocalAccount) updateBalance() {
+
+func (acc *Account) updateBalance() {
 
 	var total float32
 
@@ -27,24 +23,19 @@ func (acc *LocalAccount) updateBalance() {
 	acc.balance = total
 }
 
-func (acc *LocalAccount) Send(to Account, amount float32, desc string) {
+func (acc *Account) Send(amount float32, to Account, desc string) {
 	if acc.balance >= amount {
-		to.Receive(acc, amount, desc)
-		acc.recordTransaction(acc, to, -amount, desc)
+		to.Receive(amount, *acc, desc)
+		acc.recordTransaction(*acc, to, -amount, desc)
 	}
 }
 
-func (acc *LocalAccount) Receive(from Account, amount float32, desc string) {
-	acc.recordTransaction(from, acc, amount, desc)
+func (acc *Account) Receive(amount float32, from Account, desc string) {
+	acc.recordTransaction(from, *acc, amount, desc)
 }
 
 // Main Event
-func (acc *LocalAccount) recordTransaction(from, to Account, amount float32, desc string) bool {
-	/*
-	* Checks
-	* record
-	*/
+func (acc *Account) recordTransaction(from, to Account, amount float32, desc string) bool {
 	acc.book = append(acc.book, Transaction{time: time.Now(), from: from, to: to, amount: amount, description: desc})
-	acc.updateBalance()
 	return true
 }
