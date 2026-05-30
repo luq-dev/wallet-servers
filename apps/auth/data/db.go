@@ -36,3 +36,7 @@ func ConnectDB() *sql.DB{
 }
 
 var DB = ConnectDB()
+
+var AccountTypes map[string]int64 = map[string]int64{
+	"TEST": 1,
+}

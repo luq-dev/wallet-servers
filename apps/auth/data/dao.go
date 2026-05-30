@@ -12,7 +12,3 @@ type UserDAO struct {
 	Phone_number string `json:"phone_number"`
 	Password     string `json:"password"`
 }
-
-func (user *UserDAO) HasMinDetails() bool {
-	return user.Email != "" && user.Name != ""
-}

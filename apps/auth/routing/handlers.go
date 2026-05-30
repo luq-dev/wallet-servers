@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"servers/data"
-	"servers/services"
+	"auth/data"
+	"auth/services"
 
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
@@ -46,7 +46,7 @@ func hello_world(w http.ResponseWriter, req *http.Request) {
 
 }
 
-// Adding Users
+// app routes
 
 func addUser(w http.ResponseWriter, req *http.Request) {
 	var user data.UserDAO
@@ -62,7 +62,7 @@ func addUser(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if user.HasMinDetails() {
+	if user.Email != "" && user.Name != "" {
 		_, err := data.DB.Exec("INSERT INTO users(fullname, email, password, phone_number) values ($1,$2,$3,$4)", user.Name, user.Email, string(password), user.Phone_number)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
@@ -80,8 +80,6 @@ func addUser(w http.ResponseWriter, req *http.Request) {
 func getUser(w http.ResponseWriter, req *http.Request) {
 	var user data.UserDAO
 
-	// q := req.URL.Query()
-	// email := q.Get("email")
 	w.Header().Set("Content Type", "application/json")
 
 	if err := json.NewDecoder(req.Body).Decode(&user); err != nil {
@@ -174,7 +172,6 @@ func addAccount(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 	}
-
 }
 
 func getUserAccounts(w http.ResponseWriter, req *http.Request) {

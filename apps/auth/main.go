@@ -3,7 +3,7 @@ package main
 import (
 	"log"
 	"net/http"
-	"servers/routing"
+	"auth/routing"
 )
 
 func main() {
