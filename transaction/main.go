@@ -1,7 +1,21 @@
 package main
 
-import "fmt"
+import (
+	"log"
+	"net/http"
+	
+	"user/database"
+	. "transaction/routing"
+	. "transaction/services"
+)
 
 func main(){
-	fmt.Println("Transcations...")
+	t := NewTrasactionProcessor(database.DB)
+	go t.FetchAndProcessTransactions()
+
+	RegisterRoutes()
+
+	if err := http.ListenAndServe(":8082", nil); err != nil {
+		log.Printf("Server Failed: %s\n", err)
+	}
 }
