@@ -4,7 +4,7 @@ type Transaction struct {
 	Id              string `json:"id"`
 	From            string `json:"from"`
 	To              string `json:"to"`
-	Amount          int64  `json:"amount"` // cents
+	Amount          int64  `json:"amount"` // Amount in cents
 	Currency        string `json:"currency"`
 	DestinationBank string `json:"bank"`
 	Details         string `json:"details"`
@@ -16,3 +16,6 @@ type Account struct {
 	Name string `json:"account_name"`
 }
 
+type Ledger struct{
+	
+}

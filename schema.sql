@@ -1,5 +1,7 @@
-CREATE TYPE transaction_status AS ENUM ('PENDING', 'COMPLETE');
+CREATE TYPE transaction_state AS ENUM ('PENDING', 'COMPLETE');
 CREATE TYPE user_role AS ENUM ('user','admin');
+
+-- TABLES
 
 CREATE TABLE IF NOT EXISTS users (
         id BIGSERIAL PRIMARY KEY,
@@ -33,14 +35,14 @@ CREATE TABLE IF NOT EXISTS balances (
 
 CREATE TABLE IF NOT EXISTS transactions (
     id BIGSERIAL PRIMARY KEY,
-    transaction_id VARCHAR(16),
+    transaction_id VARCHAR(16),     -- need a keying system
     from_account_number VARCHAR(255),
     to_account_number VARCHAR(255),
     currency VARCHAR(3) NOT NULL,
     amount DECIMAL(18, 2) NOT NULL,
     destination_bank VARCHAR(255),
     details TEXT,
-    transaction_state transaction_status NOT NULL,                            -- transaction_state ('PENDING', 'COMPLETE')
+    transaction_status transaction_state NOT NULL,                            -- transaction_state ('PENDING', 'COMPLETE')
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 )PARTITION BY RANGE (created_at);
 
@@ -58,12 +60,27 @@ CREATE TABLE IF NOT EXISTS account_types (
     type_name VARCHAR(50) NOT NULL
 );
 
+
+CREATE TABLE IF NOT EXISTS exchange_rates {
+    business_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    currency VARCHAR(3) NOT NULL,
+    rate DECIMAL(18, 2) NOT NULL, -- AGAINST USD
+}
+
+-- VIEWS
+
+
 CREATE VIEW user_account_details AS 
         SELECT a.user_id, a.account_id, a.account_name, t.type_name as account_type 
         FROM accounts a 
         JOIN account_types t 
         ON a.account_type = t.type_name;
 
+-- INDICES
+
 CREATE INDEX IF NOT EXISTS idx_transactions_from ON transactions(from_account_number);
 CREATE INDEX IF NOT EXISTS idx_transactions_to ON transactions(to_account_number);
 CREATE INDEX IF NOT EXISTS idx_balances_account ON balances(account_id);
+
+-- FUNCTIONS
+

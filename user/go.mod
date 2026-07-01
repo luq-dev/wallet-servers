@@ -8,6 +8,9 @@ require (
 	golang.org/x/crypto v0.52.0
 )
 
-require finance v0.0.0
+require (
+	finance v0.0.0
+	github.com/DATA-DOG/go-sqlmock v1.5.0
+)
 
 replace finance => ../finance
