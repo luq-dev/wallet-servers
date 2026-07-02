@@ -1,4 +1,4 @@
-package services
+package auth
 
 import (
 	"fmt"
@@ -25,7 +25,7 @@ func GetToken(h http.Header) (*jwt.Token, error) {
 	tokenString := strings.TrimPrefix(authString, "Bearer ") // use [:7 slice in case of performance issues]
 
 	if tokenString == authString {
-		return nil, fmt.Errorf("Missing or invalid authotrization")
+		return nil, fmt.Errorf("Missing or invalid Authotrization Header")
 	}
 
 	return jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {

@@ -1,7 +1,7 @@
 package main
 
 import (
-	"auth/routing"
+	"user/routing"
 	"log"
 	"net/http"
 )

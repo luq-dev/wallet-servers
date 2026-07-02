@@ -1,12 +1,10 @@
 package routing
 
 import (
-	"fmt"
 	"net/http"
 )
 
 func RegisterRoutes() {
-	http.HandleFunc("GET /test", conn_test)
 	http.HandleFunc("GET /u", hello_world)
 	http.HandleFunc("POST /u/add", addUser)
 	http.HandleFunc("POST /u/get", getUser)
@@ -15,9 +13,6 @@ func RegisterRoutes() {
 	http.HandleFunc("POST /acc/get", getUserAccounts)	// just accounts associated with the use
 }
 
-func conn_test(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "Hello World")
-}
 /*
 
 Get user details, 			[x]

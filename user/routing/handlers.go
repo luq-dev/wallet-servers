@@ -1,21 +1,26 @@
 package routing
 
 import (
-	"auth/data"
-	"auth/services"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"finance/models"
+	"user/data"
+	"user/database"
+	"user/services/auth"
+	"user/services/dao"
 
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 )
 
+var userDAO = dao.NewUserDAO(database.DB)
+
 // Hello World
 
 func hello_world(w http.ResponseWriter, req *http.Request) {
 
-	t, err := services.GetToken(req.Header)
+	t, err := auth.GetToken(req.Header)
 	if err != nil {
 		http.Error(w, "Invalid token", http.StatusUnauthorized)
 		return
@@ -33,7 +38,7 @@ func hello_world(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	r := data.DB.QueryRow("SELECT fullname, email FROM users WHERE id = $1", int64(uid))
+	r := database.DB.QueryRow("SELECT fullname, email FROM users WHERE id = $1", int64(uid))
 
 	var user data.User
 	if err := r.Scan(&user.Name, &user.Email); err != nil {
@@ -56,25 +61,13 @@ func addUser(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	password, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	if user.Email != "" && user.Name != "" {
-		_, err := data.DB.Exec("INSERT INTO users(fullname, email, password, phone_number) values ($1,$2,$3,$4)", user.Name, user.Email, string(password), user.PhoneNumber)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
+	if err := userDAO.AddUser(&user); err == nil {
+		w.WriteHeader(http.StatusCreated)
+		w.Write(([]byte("user added")))
 	} else {
-		http.Error(w, "Missing Data", http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-
-	w.WriteHeader(http.StatusCreated)
-	w.Write(([]byte("user added")))
 }
 
 func getUser(w http.ResponseWriter, req *http.Request) {
@@ -87,15 +80,12 @@ func getUser(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	row := data.DB.QueryRow("SELECT fullname, email FROM users WHERE email=$1", user.Email)
-
-	err := row.Scan(&user.Name, &user.Email)
+	u, err := userDAO.GetUserByEmail(user.Email)
 	if err != nil {
-		http.Error(w, "{\"Error\": \"User Not Found\"}", http.StatusNotFound)
-		return
+		http.Error(w, "User Not Found", http.StatusNotFound)
 	}
 
-	enc_err := json.NewEncoder(w).Encode(map[string]string{"email": user.Email, "fullname": user.Name})
+	enc_err := json.NewEncoder(w).Encode(map[string]string{"email": u.Email, "fullname": u.Name})
 	if enc_err != nil {
 		panic(enc_err)
 	}
@@ -111,7 +101,7 @@ func getAuthUser(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	r := data.DB.QueryRow("SELECT id, password from users WHERE email = $1", user.Email)
+	r := database.DB.QueryRow("SELECT id, password from users WHERE email = $1", user.Email)
 
 	err := r.Scan(&uid, &p0)
 
@@ -124,7 +114,7 @@ func getAuthUser(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, err.Error(), http.StatusForbidden)
 		return
 	} else {
-		token, err := services.GenerateToken(uid)
+		token, err := auth.GenerateToken(uid)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -136,7 +126,7 @@ func getAuthUser(w http.ResponseWriter, req *http.Request) {
 
 func addAccount(w http.ResponseWriter, req *http.Request) {
 
-	t, err := services.GetToken(req.Header)
+	t, err := auth.GetToken(req.Header)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
@@ -144,7 +134,7 @@ func addAccount(w http.ResponseWriter, req *http.Request) {
 
 	mapClaims, ok := t.Claims.(jwt.MapClaims)
 	if !ok {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
+		http.Error(w, "Invalid Claims", http.StatusUnauthorized)
 		return
 	}
 
@@ -154,17 +144,17 @@ func addAccount(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	var acc data.Account
-	dec_err := json.NewDecoder(req.Body).Decode(acc)
+	var acc models.Account
+	dec_err := json.NewDecoder(req.Body).Decode(&acc)
 
-	if err != nil {
+	if dec_err != nil {
 		http.Error(w, dec_err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	if acc.Name != "" && acc.Type != 0 {
+	if acc.Name != "" && acc.Type != "" {
 
-		_, err := data.DB.Exec("INSERT INTO accounts(user_id, account_name, account_type) VALUES ($1, $2, $3)", int64(uid), acc.Name, acc.Type)
+		_, err := database.DB.Exec("INSERT INTO accounts(user_id, account_name, account_type) VALUES ($1, $2, $3)", int64(uid), acc.Name, acc.Type)
 
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
@@ -174,13 +164,41 @@ func addAccount(w http.ResponseWriter, req *http.Request) {
 }
 
 func getUserAccounts(w http.ResponseWriter, req *http.Request) {
+	t, err := auth.GetToken(req.Header)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
 
-}
+	mapClaims, ok := t.Claims.(jwt.MapClaims)
+	if !ok {
+		http.Error(w, "Invalid Map Claims", http.StatusUnauthorized)
+		return
+	}
 
-func sendMoney(w http.ResponseWriter, req *http.Request) {
+	uid, ok := mapClaims["uid"].(float64)
+	if !ok {
+		http.Error(w, "Invalid Map claims", http.StatusUnauthorized)
+		return
+	}
 
-}
+	rows, err := database.DB.Query("SELECT account_id, account_name, account_type FROM user_account_details WHERE user_id = $1", int64(uid))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
 
-func fundWallet(w http.ResponseWriter, req *http.Request) {
+	var accounts []models.Account
 
+	for rows.Next() {
+		var r1 int64
+		var r2 string
+		var r3 string
+		rows.Scan(&r1, &r2, &r3)
+		accounts = append(accounts, models.Account{ID: r1, Type: r2, Name: r3})
+	}
+	rows.Close()
+
+	w.Header().Set("Content Type", "application/json")
+	json.NewEncoder(w).Encode(accounts)
 }

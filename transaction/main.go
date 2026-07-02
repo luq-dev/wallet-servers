@@ -1,7 +1,17 @@
 package main
 
-import "fmt"
+import (
+	"log"
+	"net/http"
+	
+	. "transaction/routing"
+)
 
 func main(){
-	fmt.Println("Transcations...")
+
+	RegisterRoutes()
+
+	if err := http.ListenAndServe(":8082", nil); err != nil {
+		log.Printf("Server Failed: %s\n", err)
+	}
 }
