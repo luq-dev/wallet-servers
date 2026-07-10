@@ -161,6 +161,8 @@ func addAccount(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 	}
+
+	// create a card
 }
 
 func getUserAccounts(w http.ResponseWriter, req *http.Request) {
