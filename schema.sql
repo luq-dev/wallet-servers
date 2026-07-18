@@ -4,25 +4,39 @@ CREATE TYPE user_role AS ENUM ('user','admin');
 -- TABLES
 
 CREATE TABLE IF NOT EXISTS users (
-        id BIGSERIAL PRIMARY KEY,
-        fullname VARCHAR(255) NOT NULL,
-        email VARCHAR(255) UNIQUE NOT NULL,
-        password VARCHAR(255) NOT NULL,
-        user_type user_role NOT NULL,
-        phone_number VARCHAR(20),
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    id BIGSERIAL PRIMARY KEY,
+    fullname VARCHAR(255) NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    user_type user_role NOT NULL,
+    phone_number VARCHAR(20),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS accounts (
     id BIGSERIAL PRIMARY KEY,
-    account_number VARCHAR(255) UNIQUE NOT NULL,
-    user_id INTEGER NOT NULL REFERENCES users(id),
+    account_number VARCHAR(255) UNIQUE NOT NULL, -- this is the internal known id rather than the physical database known id
+    user_id INTEGER NOT NULL REFERENCES users(email),
     account_type INTEGER NOT NULL REFERENCES account_types(id),
     currency VARCHAR(3),
     account_name VARCHAR(255),
     PIN VARCHAR(4),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS cards (
+    id BIGSERIAL PRIMARY KEY,
+    unique_id INTEGER UNIQUE,
+    network INTEGER DEFAULT 4,
+    exp DATE
+);
+
+CREATE TABLE IF NOT EXISTS user_cards (
+    id BIGSERIAL PRIMARY KEY,
+    user VARCHAR FOREIGN KEY UNIQUE REFERENCES account(account_number),
+    card_number VARCHAR, -- to be assigned by sysadmins or automated. constructed from available cards using networks and the BIN. this is part of the mock by the way not the actual thing
+);
+
 
 CREATE TABLE IF NOT EXISTS balances (
     id BIGSERIAL PRIMARY KEY,
@@ -76,11 +90,28 @@ CREATE VIEW user_account_details AS
         JOIN account_types t 
         ON a.account_type = t.type_name;
 
+-- FUNCTIONS
+
+CREATE OR REPLACE FUNCTION make100cards(
+    net NUMERIC
+)
+RETURNS VOID $$
+BEGIN
+    DECLARE start_id NUMERIC;
+    DECLARE i NUMERIC;
+
+    SELECT unique_id INTO start_id FROM cards WHERE unique_id = MAX(unique_id)
+
+    FOR i IN 1..100 LOOP
+        INSERT INTO cards(unique_id, network) VALUES(start_id + 1, net)
+        start_id := start_id + 1
+    END LOOP;
+END;
+$$ LANGUAGE plpgsql;
+
 -- INDICES
 
 CREATE INDEX IF NOT EXISTS idx_transactions_from ON transactions(from_account_number);
 CREATE INDEX IF NOT EXISTS idx_transactions_to ON transactions(to_account_number);
 CREATE INDEX IF NOT EXISTS idx_balances_account ON balances(account_id);
-
--- FUNCTIONS
 
