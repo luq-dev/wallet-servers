@@ -92,22 +92,6 @@ CREATE VIEW user_account_details AS
 
 -- FUNCTIONS
 
--- CREATE OR REPLACE FUNCTION make100cards(
---     net NUMERIC
--- )
--- RETURNS VOID $$
--- BEGIN
---     DECLARE start_id NUMERIC;
---     DECLARE i NUMERIC;
-
---     SELECT unique_id INTO start_id FROM cards WHERE unique_id = MAX(unique_id)
-
---     FOR i IN 1..100 LOOP
---         INSERT INTO cards(unique_id, network) VALUES(start_id + 1, net)
---         start_id := start_id + 1
---     END LOOP;
--- END;
--- $$ LANGUAGE plpgsql;
 
 -- INDICES
 
