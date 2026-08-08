@@ -2,7 +2,6 @@ package routing
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"storage/database"
 	"user/data"
@@ -19,7 +18,9 @@ func signup(w http.ResponseWriter, req *http.Request) {
 	var user data.User
 
 	if err := json.NewDecoder(req.Body).Decode(&user); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 		return
 	}
 
@@ -28,19 +29,27 @@ func signup(w http.ResponseWriter, req *http.Request) {
 	if err == nil {
 		tk, e := auth.GenerateToken(id)
 		if e != nil {
-			http.Error(w, e.Error(), http.StatusInternalServerError)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(map[string]string{"error":e.Error()})
+			return
 		}
 
 		res, enc_err := json.Marshal(map[string]string{"token": tk})
 		if enc_err != nil {
-			http.Error(w, enc_err.Error(), http.StatusInternalServerError)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(map[string]string{"error":enc_err.Error()})
+			return
 		}
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
 		w.Write(res)
 	} else {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error":err.Error()})
 		return
 	}
 }
@@ -51,28 +60,38 @@ func login(w http.ResponseWriter, req *http.Request) {
 	var p0 string
 
 	if err := json.NewDecoder(req.Body).Decode(&user); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error":err.Error()})
 		return
 	}
 
 	err := database.DB.QueryRow("SELECT id, password from users WHERE email = $1", user.Email).Scan(&uid, &p0)
 
 	if err != nil {
-		http.Error(w, "User Not Found", http.StatusNotFound)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(map[string]string{"error":"User Not Found"})
 		return
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(p0), []byte(user.Password)); err != nil {
-		http.Error(w, err.Error(), http.StatusForbidden)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusForbidden)
+		json.NewEncoder(w).Encode(map[string]string{"error":"Invalid password"})
 		return
 	} else {
 		token, err := auth.GenerateToken(uid)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 			return
 		}
 
-		fmt.Fprint(w, token)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]string{"token": token})
 	}
 }
 
@@ -80,19 +99,25 @@ func pingUser(w http.ResponseWriter, req *http.Request) {
 
 	t, err := auth.GetToken(req.Header)
 	if err != nil {
-		http.Error(w, "Invalid token", http.StatusUnauthorized)
+		w.Header().Set("Content-Type", "applicatio/json")
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(map[string]string{"error":"Invalid Token"})
 		return
 	}
 
 	tmap, ok := t.Claims.(jwt.MapClaims)
 	if !ok {
-		http.Error(w, "Invalid token claims", http.StatusUnauthorized)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Invalid Token Claims"})
 		return
 	}
 
 	uid, ok := tmap["uid"].(float64)
 	if !ok {
-		http.Error(w, "Invalid user ID in token", http.StatusUnauthorized)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(map[string]string{"error":"Invalid Token Claim"})
 		return
 	}
 
@@ -100,10 +125,8 @@ func pingUser(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 	}
-
+	
 	w.Header().Set("Content-Type", "application/json")
-	enc_err := json.NewEncoder(w).Encode(user)
-	if err != nil{
-		http.Error(w, enc_err.Error(), http.StatusInternalServerError)
-	}
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(user)
 }
