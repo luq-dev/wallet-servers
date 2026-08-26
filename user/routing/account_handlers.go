@@ -1,21 +1,25 @@
 package routing
 
-import(
-	"bytes"
-	"net/http"
+import (
 	"encoding/json"
+	"net/http"
 
-	"user/services/auth"
 	"finance/models"
 	"storage/database"
+	"user/services/auth"
+	"user/services/dao"
 
 	"github.com/golang-jwt/jwt/v5"
 )
 
-// incomplete
+var cardDao = dao.NewCardDAO(database.DB)
+var accountDao = dao.NewAccountDAO(database.DB)
+
 func addAccount(w http.ResponseWriter, req *http.Request) {
 
-	t, err := auth.GetToken(req.Header)
+	ctx := req.Context()
+
+	t, err := auth.GetHeaderToken(req.Header)
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusUnauthorized)
@@ -60,27 +64,17 @@ func addAccount(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	// assign a card
-	r, req_err := http.Post("localhost:8083", "Content-Type: application/json", bytes.NewReader([]byte(accNumber)))
-	if req_err != nil {
+	card, card_err := cardDao.NewCard(ctx, accNumber)
 
-	}
-
-	var card map[string]string
-
-	defer r.Body.Close()
-
-	decode_err := json.NewDecoder(r.Body).Decode(&card)
-
-	if decode_err != nil {
+	if card_err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(map[string]string{"error": "Error while creating a card"})
 		return
 	}
-	resp_data := map[any]any {
+	resp_data := map[any]any{
 		"account_number": accNumber,
-		"card": card,
+		"card":           card,
 	}
 	rdata, enc_err := json.Marshal(resp_data)
 
@@ -97,11 +91,12 @@ func addAccount(w http.ResponseWriter, req *http.Request) {
 }
 
 func getUserAccounts(w http.ResponseWriter, req *http.Request) {
-	t, err := auth.GetToken(req.Header)
+	ctx := req.Context()
+	t, err := auth.GetHeaderToken(req.Header)
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(map[string]string{"error":err.Error()})
+		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 		return
 	}
 
@@ -109,36 +104,26 @@ func getUserAccounts(w http.ResponseWriter, req *http.Request) {
 	if !ok {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(map[string]string{"error":"Invalid Claims"})
+		json.NewEncoder(w).Encode(map[string]string{"error": "Invalid Claims"})
 		return
 	}
 
-	uid, ok := mapClaims["uid"].(float64)
+	email, ok := mapClaims["email"].(string)
+	
 	if !ok {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(map[string]string{"error":"Invalid uid"})
+		json.NewEncoder(w).Encode(map[string]string{"error": "Invalid uid"})
 		return
 	}
 
-	rows, err := database.DB.Query("SELECT account_id, account_name, account_type FROM user_account_details WHERE user_id = $1", int64(uid))
-	if err != nil {
+	accounts, accounts_err := accountDao.GetUserAccounts(ctx, email)
+	if accounts_err != nil {
 		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(map[string]string{"error": accounts_err.Error()})
 		return
 	}
-
-	var accounts []models.Account
-
-	for rows.Next() {
-		var r1 int64
-		var r2 string
-		var r3 string
-		rows.Scan(&r1, &r2, &r3)
-		accounts = append(accounts, models.Account{ID: r1, Type: r2, Name: r3})
-	}
-	rows.Close()
 
 	w.Header().Set("Content Type", "application/json")
 	w.WriteHeader(http.StatusOK)
