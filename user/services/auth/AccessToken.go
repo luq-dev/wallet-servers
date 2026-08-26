@@ -11,16 +11,17 @@ import (
 
 var secret = []byte("1234567345678")
 
-func GenerateToken(uid int64) (string, error) {
+func GenerateToken(uid int64, email string) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"uid": uid,
+		"email": email,
 		"iat": time.Now().Unix(),
 		"exp": time.Now().Add(time.Hour * 72).Unix(),
 	})
 	return token.SignedString(secret)
 }
 
-func GetToken(h http.Header) (*jwt.Token, error) {
+func GetHeaderToken(h http.Header) (*jwt.Token, error) {
 	authString := h.Get("Authorization")
 	tokenString := strings.TrimPrefix(authString, "Bearer ") // use [:7 slice in case of performance issues]
 
