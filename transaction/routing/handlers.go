@@ -2,39 +2,31 @@ package routing
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 
 	"user/services/auth"
+	"transaction/services/message"
 )
 
-type TransactionMessage map[string]string
+
+func RegisterRoutes() {
+	http.HandleFunc("POST /t", TransactionHandler)
+}
+
 
 func TransactionHandler(w http.ResponseWriter, r *http.Request) {
-	// Transaction {to: Account.email, from: Account.email, amount: float64} *amount in sender's currency *security checks like sender's [valid or not] client to be added
-	// notify reciever on new transaction added
+	var msg message.ISO8583
 
-	_, err := auth.GetToken(r.Header)
+	_, err := auth.GetHeaderToken(r.Header)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
-	// need security checks here
 
-	var t TransactionMessage
-
-	if dec_err := json.NewDecoder(r.Body).Decode(&t); dec_err != nil {
+	if dec_err := json.NewDecoder(r.Body).Decode(&msg); dec_err != nil {
 		http.Error(w, "Error", http.StatusBadRequest)
 		return
 	}
 
-	// verify involved parties
-	
-	go worker(t)
-
-	fmt.Fprintf(w, "Transaction Processing...")
-}
-
-func worker(t TransactionMessage) {
-
+	// process transaction message
 }
