@@ -6,11 +6,11 @@ import (
 )
 
 type AccountDTO struct {
-	Name string `json:"name"`
-	Number string `json:"number"`
+	Name      string `json:"name"`
+	Number    string `json:"number"`
 	UserEmail string `json:"user_email`
-	Type string `json:"type"`
-	Currency string `json:"currency"`
+	Type      string `json:"type"`
+	Currency  string `json:"currency"`
 }
 
 type AccountDAO struct {
@@ -23,7 +23,7 @@ func NewAccountDAO(db *sql.DB) *AccountDAO {
 	}
 }
 
-func(a *AccountDAO) GetUserAccounts(ctx context.Context, userEmail string) ([]AccountDTO, error) {
+func (a *AccountDAO) GetUserAccounts(ctx context.Context, userEmail string) ([]AccountDTO, error) {
 	tx, txBegin_err := a.DB.BeginTx(ctx, nil)
 	defer tx.Rollback()
 
@@ -40,7 +40,7 @@ func(a *AccountDAO) GetUserAccounts(ctx context.Context, userEmail string) ([]Ac
 	}
 
 	defer rows.Close()
-	
+
 	for rows.Next() {
 		var tempAccount AccountDTO
 

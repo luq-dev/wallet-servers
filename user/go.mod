@@ -11,8 +11,9 @@ require (
 require (
 	finance v0.0.0
 	storage v0.0.0
+	transaction v0.0.0
 )
 
 replace finance => ../finance
-
+replace transaction => ../transaction 
 replace storage => ../storage
