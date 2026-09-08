@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"finance/models"
 	"storage/database"
 	"user/services/auth"
 	"user/services/dao"
@@ -43,7 +42,7 @@ func addAccount(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	var acc models.Account
+	var acc dao.AccountDTO
 	dec_err := json.NewDecoder(req.Body).Decode(&acc)
 
 	if dec_err != nil {
@@ -109,7 +108,7 @@ func getUserAccounts(w http.ResponseWriter, req *http.Request) {
 	}
 
 	email, ok := mapClaims["email"].(string)
-	
+
 	if !ok {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusUnauthorized)
