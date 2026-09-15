@@ -3,11 +3,11 @@ package main
 import (
 	"log"
 	"net/http"
-	
+
 	"transaction/routing"
 )
 
-func main(){
+func main() {
 
 	routing.RegisterRoutes()
 
